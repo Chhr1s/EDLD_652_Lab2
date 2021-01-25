@@ -1,0 +1,78 @@
+---
+title: "Loan_EDLD_652_Lab2"
+author: "Christopher Loan"
+date: "1/25/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(fivethirtyeight)
+library(fivethirtyeightdata)
+library(tidyverse)
+library(viridis)
+```
+
+```{r}
+head(google_trends)
+```
+# Question 1.
+
+```{r}
+gt_long <- google_trends %>% 
+  pivot_longer(cols = -date, 
+               names_prefix = "hurricane_",
+               values_to = "search"
+               ) %>% 
+  mutate(name = factor(name, 
+                       labels = c('Harvey', 'Irma', 'Jose', 'Maria')))
+
+```
+
+## Visualization 1
+
+```{r}
+gt_long %>% mutate(Hurricane = name) %>% 
+  ggplot(aes(x = date, y = search, color = Hurricane)) +
+  geom_line() +
+  scale_fill_viridis(discrete = T) + 
+  theme_minimal() + 
+  labs(y = 'Relative Google Search Interest (US)',
+       x = 'Date',
+       title = 'US Search Interest for 4 Hurricanes') +
+  theme(panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Visualization 2 (Discrete Scale)
+```{r}
+gt_long %>% 
+  ggplot(aes(x = date, y = search, fill = name)) +
+  geom_line(color = 'Black') +
+  geom_ribbon(aes(ymin = 0, ymax = search), 
+              alpha = 0.7) +
+  scale_fill_viridis(discrete = T) +
+  theme_minimal() + 
+  labs(y = 'Relative Google Search Interest (US)',
+       x = 'Date',
+       title = 'US Search Interest for 4 Hurricanes') +
+  theme(panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+## Visualization 2 (Continous Scale)
+```{r}
+gt_long %>% 
+  ggplot(aes(x = date, y = search, fill = name)) +
+  geom_line(color = 'Black') +
+  geom_ribbon(aes(ymin = 0, ymax = search), 
+              alpha = 0.7) +
+  scale_fill_viridis(discrete = F) +
+  theme_minimal() + 
+  labs(y = 'Relative Google Search Interest (US)',
+       x = 'Date',
+       title = 'US Search Interest for 4 Hurricanes') +
+  theme(panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1))
+```
