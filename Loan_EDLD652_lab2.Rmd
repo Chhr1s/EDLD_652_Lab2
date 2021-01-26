@@ -2,37 +2,39 @@
 title: "Loan_EDLD_652_Lab2"
 author: "Christopher Loan"
 date: "1/25/2021"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = F, 
+                      warning = F,
+                      message = F)
 library(fivethirtyeight)
 library(fivethirtyeightdata)
 library(tidyverse)
 library(viridis)
 ```
 
-```{r}
-head(google_trends)
-```
 # Question 1.
 
 ```{r}
 gt_long <- google_trends %>% 
   pivot_longer(cols = -date, 
                names_prefix = "hurricane_",
-               values_to = "search"
+               values_to = "search", 
+               names_to = "Hurricane",
                ) %>% 
-  mutate(name = factor(name, 
+  mutate(Hurricane = factor(Hurricane, 
                        labels = c('Harvey', 'Irma', 'Jose', 'Maria')))
-
 ```
 
 ## Visualization 1
 
 ```{r}
-gt_long %>% mutate(Hurricane = name) %>% 
+gt_long %>% 
   ggplot(aes(x = date, y = search, color = Hurricane)) +
   geom_line() +
   scale_fill_viridis(discrete = T) + 
@@ -47,7 +49,7 @@ gt_long %>% mutate(Hurricane = name) %>%
 ## Visualization 2 (Discrete Scale)
 ```{r}
 gt_long %>% 
-  ggplot(aes(x = date, y = search, fill = name)) +
+  ggplot(aes(x = date, y = search, fill = Hurricane)) +
   geom_line(color = 'Black') +
   geom_ribbon(aes(ymin = 0, ymax = search), 
               alpha = 0.7) +
@@ -60,19 +62,229 @@ gt_long %>%
         axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-
 ## Visualization 2 (Continous Scale)
 ```{r}
 gt_long %>% 
-  ggplot(aes(x = date, y = search, fill = name)) +
+  ggplot(aes(x = date, y = Hurricane, fill = search)) +
+  geom_tile(color = 'white') +
+  coord_fixed() +
+  theme_minimal() + 
+  labs(y = 'Hurricane',
+       x = 'Date',
+       title = 'US Search Interest\nfor 4 Hurricanes') +
+  theme(panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_text(angle = 45, hjust = 1)) + 
+  scale_fill_continuous(name = 'Relative\nSearch\nInterest',
+                        type = 'viridis')
+```
+
+```{r}
+landfall <- 
+  tibble(Hurricane = c('Harvey', 'Irma', 'Jose', 'Maria'), 
+         land_date = c('08-25-2017', '09-10-2017', NA, '09-20-2017'), 
+         text = c('Harvey Landfall',
+                  'Irma Landfall',
+                  'Jose Landfall',
+                  'Maria Landfall'))%>% 
+  mutate(Hurricane = factor(Hurricane), 
+         land_date = as.Date(land_date, '%m-%d-%Y'))
+```
+
+```{r}
+dat_joined <- gt_long %>% 
+  left_join(landfall, by = 'Hurricane')
+```
+
+## Added details
+
+```{r}
+dat_joined %>% 
+  ggplot(aes(x = date, y = search, fill = Hurricane)) +
+  geom_label(data = landfall, 
+             aes(label = text,
+                 x = land_date,
+                 y = c(44, 100, NA, 21), # max
+                 hjust = 0.8, 
+                 vjust = 0,
+                 color = c('White', 'White', NA, 'Black')), 
+             show.legend = F) + 
+  geom_vline(aes(xintercept = land_date, color = Hurricane), 
+             show.legend = F) +
   geom_line(color = 'Black') +
   geom_ribbon(aes(ymin = 0, ymax = search), 
               alpha = 0.7) +
-  scale_fill_viridis(discrete = F) +
+  scale_fill_viridis(discrete = T) +
+  scale_color_viridis(discrete = T) +
   theme_minimal() + 
   labs(y = 'Relative Google Search Interest (US)',
        x = 'Date',
        title = 'US Search Interest for 4 Hurricanes') +
   theme(panel.grid.minor = element_blank(), 
         axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+# Question 2. 
+
+```{r}
+tv_long <- tv_states %>% 
+  pivot_longer(cols = -date, 
+               values_to = "Percent", 
+               names_to = "State",
+               ) %>% 
+  mutate(State = factor(State, 
+                        labels = c('Florida', 'Puerto Rico', 'Texas')))
+```
+
+```{r}
+plot_text <- 
+  tibble(Date =  c('08-25-2017', 
+                   '09-10-2017', 
+                   '09-20-2017', 
+                   '10-01-2017'), 
+         
+         text = c('Harvey\nlandfall',
+                  'Irma\nlandfall',
+                  'Maria\nlandfall', 
+                  'Las Vegas\nshooting')) %>% 
+  mutate(text = factor(text), 
+         Date = as.Date(Date, '%m-%d-%Y'))
+temp_dat <- tibble(label = c('Texas', 'Florida', 'Puerto Rico'),
+                   x = c('08-28-2017', '09-09-2017', '09-30-2017'), 
+                   y = c(0.9, 1.5, 1.3)) %>% 
+  mutate(x = as.Date(x, '%m-%d-%Y'))
+```
+
+```{r}
+tv_long %>% 
+  mutate(State = factor(State,
+                        levels = c('Florida', 'Texas', 'Puerto Rico'))) %>% 
+  ggplot(aes(x = date, 
+             y = Percent, 
+             fill = State)) +
+  geom_ribbon(aes(ymin = 0, 
+                  ymax = Percent),
+              color = 'white') +
+  xlim(min = min(as.Date('08-15-2017', '%m-%d-%Y')), 
+       max = max(tv_long$date)) +
+  scale_y_continuous(name = 'Share of sentences', 
+                     breaks = 0:3, 
+                     labels = c('0','1','2','3%')) +
+  labs(title = 'National cable news networks',
+       x = NULL) + 
+  scale_fill_manual(values = c('hotpink', 'darkorange', 'darkcyan')) + 
+  geom_vline(data = plot_text, 
+             inherit.aes = F,
+             aes(xintercept = Date), 
+             color = 'gray70', 
+             linetype = "dotted"
+             )+
+  geom_label(data = plot_text, 
+             inherit.aes = F,
+            aes(label = text,
+                 x = Date,
+                 y = c(3.25, 3.25, 2.5, 3),
+                 hjust = c(0.5, 0, 0.5, 0.5), 
+            ),
+            color = 'gray70', 
+            show.legend = F, 
+            label.size = 0) +
+  geom_label(data = temp_dat,
+           inherit.aes = F,
+          aes(label = label,
+               x = x,
+               y = y,
+              fontface = 'bold'),
+          color = 'White',
+          show.legend = F,
+          label.size = 0,
+          alpha = 0) +
+  geom_label(data = temp_dat,
+           inherit.aes = F,
+          aes(label = label,
+               x = x,
+               y = y),
+          color = 'Black',
+          show.legend = F,
+          label.size = 0,
+          alpha = 0) +
+  theme_minimal() + 
+  theme(panel.grid.minor = element_blank(), 
+        plot.title = element_text(hjust = 0.5, face = 'bold'), 
+        legend.position = 'none') 
+
+```
+
+# Question 3
+
+## Plot 1
+
+```{r}
+
+# group_dat <- comic_characters %>% 
+#   filter(!is.na(sex) & year > 1980) %>% 
+#   group_by(sex) %>% 
+#   summarize(n = n()) %>%
+#   mutate(prop = round(n / sum(n), 2))
+
+
+comic_characters %>% 
+  filter(!is.na(sex) & year > 1980) %>% 
+  mutate(total = n()) %>% 
+  group_by(sex) %>% 
+  mutate(count = n(), 
+         prop = count/total) %>% 
+  ggplot(aes(x = year, y = fct_reorder(sex, prop), fill = prop)) +
+  geom_tile(color = 'white') +
+  coord_fixed() +
+  theme_minimal() + 
+  labs(y = NULL,
+       x = 'Year',
+       title = 'Proportion of Comic Characters\nby Gender since 1980') +
+  theme(panel.grid.minor = element_blank(), 
+        axis.text.x = element_text(angle = 45, hjust = 1), 
+        axis.text.y = element_text(angle = 45, hjust = 1)) + 
+  scale_fill_continuous(name = 'Proportion',
+                        type = 'viridis') 
+```
+
+## Plot 2
+
+
+```{r}
+
+comic_characters %>% 
+  filter(!is.na(sex) & year > 1980) %>% 
+  mutate(total = n()) %>% 
+  group_by(sex) %>% 
+  mutate(count = n(), 
+         prop = count/total) %>% 
+  ggplot(aes(x = prop, y = fct_reorder(sex, prop), fill = prop)) + 
+  geom_col(position = 'identity') +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank(), 
+        axis.text.y = element_text(angle = 45, hjust = 0.5),
+        legend.position = 'none') + 
+  labs(title = 'Proportion of Appearances of Comic Characters\nby Gender since 1980',
+       y = 'Gender', 
+       x = 'Proportion') +
+  geom_vline(aes(xintercept = prop, color = prop, linetype = factor(prop)))
+```
+
+
+## Plot 3 
+```{r}
+comic_characters %>% 
+  filter(!is.na(sex) & year > 1980) %>% 
+  group_by(sex) %>% 
+  mutate(count = n()) %>% 
+  filter(count > 10) %>% 
+  ggplot(aes(x = year, fill = sex)) + 
+  geom_bar(position = 'fill') + 
+  theme_minimal() + 
+  labs(title = 'Representation of Genders in Comicbooks since 1980', 
+       subtitle = 'Data only represents genders with at least 10 representatives',
+       y = 'Proportion', 
+       x = 'Year') +
+  scale_fill_viridis(name = 'Gender', discrete = T) 
 ```
